@@ -22,6 +22,7 @@ use BitWasp\Buffertools\BufferInterface;
 use Blocktrail\CryptoJSAES\CryptoJSAES;
 use Blocktrail\SDK\Bitcoin\BIP32Key;
 use Blocktrail\SDK\Connection\RestClient;
+use Blocktrail\SDK\Connection\RestClientInterface;
 use Blocktrail\SDK\V3Crypt\Encryption;
 use Blocktrail\SDK\V3Crypt\EncryptionMnemonic;
 
@@ -114,6 +115,13 @@ class BlocktrailSDK implements BlocktrailSDKInterface {
     }
 
     /**
+     * @param RestClientInterface $client
+     */
+    public function setRestClient(RestClientInterface $client) {
+        $this->client = $client;
+    }
+
+    /**
      * enable CURL debugging output
      *
      * @param   bool        $debug
@@ -147,7 +155,7 @@ class BlocktrailSDK implements BlocktrailSDKInterface {
     }
 
     /**
-     * @return  RestClient
+     * @return  RestClientInterface
      */
     public function getRestClient() {
         return $this->client;

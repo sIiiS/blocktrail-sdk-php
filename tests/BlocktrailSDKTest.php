@@ -5,6 +5,7 @@ namespace Blocktrail\SDK\Tests;
 use Blocktrail\SDK\BlocktrailSDK;
 use Blocktrail\SDK\Connection\Exceptions\InvalidCredentials;
 use Blocktrail\SDK\Connection\RestClient;
+use Blocktrail\SDK\Connection\RestClientInterface;
 
 class BlocktrailSDKTest extends \PHPUnit_Framework_TestCase {
 
@@ -65,7 +66,7 @@ class BlocktrailSDKTest extends \PHPUnit_Framework_TestCase {
 
     public function testRestClient() {
         $client = $this->setupBlocktrailSDK();
-        $this->assertTrue($client->getRestClient() instanceof RestClient);
+        $this->assertTrue($client->getRestClient() instanceof RestClientInterface);
     }
 
     public function testUpgradeKeyIndex() {
