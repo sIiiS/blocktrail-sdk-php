@@ -30,7 +30,7 @@ use Blocktrail\SDK\V3Crypt\EncryptionMnemonic;
  */
 class BlocktrailSDK implements BlocktrailSDKInterface {
     /**
-     * @var Connection\RestClient
+     * @var Connection\RestClientInterface
      */
     protected $client;
 
