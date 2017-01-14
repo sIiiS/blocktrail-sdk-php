@@ -61,7 +61,7 @@ abstract class BaseRestClient implements RestClientInterface
      * @param string $apiKey
      * @param string $apiSecret
      */
-    public function __construct(string $apiEndpoint, string $apiVersion, string $apiKey, string $apiSecret) {
+    public function __construct($apiEndpoint, $apiVersion, $apiKey, $apiSecret) {
         $this->apiEndpoint = $apiEndpoint;
         $this->apiVersion = $apiVersion;
         $this->apiKey = $apiKey;
@@ -73,7 +73,7 @@ abstract class BaseRestClient implements RestClientInterface
      * @param string $key
      * @return bool
      */
-    public static function hasQueryValue(Uri $uri, string $key) {
+    public static function hasQueryValue(Uri $uri, $key) {
         $current = $uri->getQuery();
         $key = strtr($key, self::$replaceQuery);
 
