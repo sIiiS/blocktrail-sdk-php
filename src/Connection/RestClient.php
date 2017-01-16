@@ -9,7 +9,6 @@ use GuzzleHttp\HandlerStack;
 use HttpSignatures\Context;
 use HttpSignatures\GuzzleHttpSignatures;
 
-
 class RestClient extends BaseRestClient
 {
     /**
@@ -34,8 +33,7 @@ class RestClient extends BaseRestClient
      * @param $apiKey
      * @param $apiSecret
      */
-    public function __construct($apiEndpoint, $apiVersion, $apiKey, $apiSecret)
-    {
+    public function __construct($apiEndpoint, $apiVersion, $apiKey, $apiSecret) {
         parent::__construct($apiEndpoint, $apiVersion, $apiKey, $apiSecret);
         $this->guzzle = $this->createGuzzleClient();
     }
@@ -136,5 +134,4 @@ class RestClient extends BaseRestClient
 
         return $this->responseHandler($response);
     }
-
 }
