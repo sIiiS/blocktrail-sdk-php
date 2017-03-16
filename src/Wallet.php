@@ -131,6 +131,7 @@ abstract class Wallet implements WalletInterface {
     protected $optimalFeePerKB;
     protected $lowPriorityFeePerKB;
     protected $feePerKBAge;
+    protected $allowedSignModes = [SignInfo::MODE_DONTSIGN, SignInfo::MODE_SIGN];
 
     /**
      * @param BlocktrailSDKInterface        $sdk                        SDK instance used to do requests
@@ -518,6 +519,21 @@ abstract class Wallet implements WalletInterface {
     public function coinSelectionForTxBuilder(TransactionBuilder $txBuilder, $lockUTXOs = true, $allowZeroConf = false, $forceFee = null) {
         // get the data we should use for this transaction
         $coinSelection = $this->coinSelection($txBuilder->getOutputs(/* $json = */true), $lockUTXOs, $allowZeroConf, $txBuilder->getFeeStrategy(), $forceFee);
+        /*
+        $coinSelection['utxos'][] = [
+            // cQpy3YuKkp2uqM9wGgJqjvM9pZAwdG3bPx3Z3j2rKyevm1WKt8tu
+            'hash' => '5c9ff51020f874eac19f2f380b16459eec278230089f570bed33af061794157a',
+            'idx' => 1,
+            'scriptpubkey_hex' => '76a914ae53d5fc48cd3fa14be54896fc406423631904aa88ac',
+            'value' => 10000,
+            'confirmations' => 1,
+            'address' => 'mwQiJT9YSKNSshYUoXa5G6F6i7wxpzyY3C',
+            'sign_mode' => 'dont_sign',
+            'path' => null,
+            'redeem_script' => null,
+        ];
+        */
+
         $utxos = $coinSelection['utxos'];
         $fee = $coinSelection['fee'];
         $change = $coinSelection['change'];
@@ -529,10 +545,15 @@ abstract class Wallet implements WalletInterface {
         }
 
         foreach ($utxos as $utxo) {
-            $scriptPubKey = ScriptFactory::fromHex($utxo['scriptpubkey_hex']);
-            $redeemScript = ScriptFactory::fromHex($utxo['redeem_script']);
-            $address = AddressFactory::fromString($utxo['address']);
-            $txBuilder->spendOutput($utxo['hash'], $utxo['idx'], $utxo['value'], $address, $scriptPubKey, $utxo['path'], $redeemScript);
+            $signMode = SignInfo::MODE_SIGN;
+            if (isset($utxo['sign_mode'])) {
+                $signMode = $utxo['sign_mode'];
+                if (!in_array($signMode, $this->allowedSignModes)) {
+                    throw new \Exception("Sign mode disallowed by wallet");
+                }
+            }
+
+            $txBuilder->spendOutput($utxo['hash'], $utxo['idx'], $utxo['value'], $utxo['address'], $utxo['scriptpubkey_hex'], $utxo['path'], $utxo['redeem_script'], $signMode);
         }
 
         return $txBuilder;
@@ -573,16 +594,18 @@ abstract class Wallet implements WalletInterface {
                 }
             }
 
-            if (!$utxo->path) {
-                $utxo->path = $this->getPathForAddress($utxo->address->getAddress());
+            if (SignInfo::MODE_SIGN === $utxo->signMode) {
+                if (!$utxo->path) {
+                    $utxo->path = $this->getPathForAddress($utxo->address->getAddress());
+                }
+
+                if (!$utxo->redeemScript) {
+                    list(, $redeemScript) = $this->getRedeemScriptByPath($utxo->path);
+                    $utxo->redeemScript = $redeemScript;
+                }
             }
 
-            if (!$utxo->redeemScript) {
-                list(, $redeemScript) = $this->getRedeemScriptByPath($utxo->path);
-                $utxo->redeemScript = $redeemScript;
-            }
-
-            $signInfo[] = new SignInfo($utxo->path, $utxo->redeemScript, new TransactionOutput($utxo->value, $utxo->scriptPubKey));
+            $signInfo[] = $utxo->getSignInfo();
         }
 
         $utxoSum = array_sum(array_map(function (UTXO $utxo) {
@@ -608,7 +631,7 @@ abstract class Wallet implements WalletInterface {
         }
 
         foreach ($utxos as $utxo) {
-            $txb->spendOutPoint(new OutPoint(Buffer::hex($utxo->hash), $utxo->index), $utxo->scriptPubKey);
+            $txb->spendOutPoint(new OutPoint(Buffer::hex($utxo->hash), $utxo->index));
         }
 
         // outputs should be randomized to make the change harder to detect
@@ -726,11 +749,9 @@ abstract class Wallet implements WalletInterface {
         $signed = $this->signTransaction($tx, $signInfo);
 
         // send the transaction
-        $finished = $this->sendTransaction($signed->getHex(), array_map(function (SignInfo $r) {
+        return $this->sendTransaction($signed->getHex(), array_map(function (SignInfo $r) {
             return $r->path;
         }, $signInfo), $apiCheckFee);
-
-        return $finished;
     }
 
     /**
@@ -895,13 +916,16 @@ abstract class Wallet implements WalletInterface {
         }, $signInfo), '$signInfo should be SignInfo[]');
 
         foreach ($signInfo as $idx => $info) {
-            $path = BIP32Path::path($info->path)->privatePath();
-            $redeemScript = $info->redeemScript;
-            $output = $info->output;
+            if ($info->mode === SignInfo::MODE_SIGN) {
+                // required SignInfo: path, redeemScript, output
+                $path = BIP32Path::path($info->path)->privatePath();
+                $redeemScript = $info->redeemScript;
+                $output = $info->output;
 
-            $key = $this->primaryPrivateKey->buildKey($path)->key()->getPrivateKey();
+                $key = $this->primaryPrivateKey->buildKey($path)->key()->getPrivateKey();
 
-            $signer->sign($idx, $key, $output, (new SignData())->p2sh($redeemScript));
+                $signer->sign($idx, $key, $output, (new SignData())->p2sh($redeemScript));
+            }
         }
 
         return $signer->get();
