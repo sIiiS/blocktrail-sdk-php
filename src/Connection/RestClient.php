@@ -242,7 +242,7 @@ class RestClient {
      */
     public function buildRequest($method, $endpointUrl, $queryString = null, $body = null, $auth = null, $contentMD5Mode = null, $timeout = null) {
         if (is_null($contentMD5Mode)) {
-            $contentMD5Mode = !is_null($body) ? 'body' : 'url';
+            $contentMD5Mode = strtolower($method) !== 'delete' && !is_null($body) ? 'body' : 'url';
         }
 
         $request = new Request($method, $endpointUrl);
