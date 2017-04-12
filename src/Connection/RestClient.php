@@ -245,7 +245,7 @@ class RestClient {
             $contentMD5Mode = strtolower($method) !== 'delete' && !is_null($body) ? 'body' : 'url';
         }
 
-        $request = new Request($method, $endpointUrl);
+        $request = new Request($method, $this->apiEndpoint . $endpointUrl);
         $uri = $request->getUri();
 
         if ($queryString) {
