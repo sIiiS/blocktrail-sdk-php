@@ -300,7 +300,7 @@ class RestClient {
      * @return Response
      */
     public function request($method, $endpointUrl, $queryString = null, $body = null, $auth = null, $contentMD5Mode = null, $timeout = null) {
-        $request = $this->buildRequest($method, $endpointUrl, $queryString, $body, $contentMD5Mode);
+        $request = $this->buildRequest($method, $endpointUrl, $queryString, $body, $auth, $contentMD5Mode);
         $response = $this->guzzle->send($request, ['auth' => $auth, 'timeout' => $timeout]);
 
         return $this->responseHandler($response);
